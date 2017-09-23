@@ -26,7 +26,6 @@ numNeighbours = size(neighbourStencil,1);
 % set up empty values at FD grid points
 % speed values mm/s
 nodeSpeed = ones(domainBounds(1),domainBounds(2));
-nodeSpeed(14,5:size(nodeSpeed,1)-5) = 0;
 % travel times - to be solved for; initiall inifinity 
 travelTime = ones(domainBounds(1),domainBounds(2))*inf;
 
@@ -71,17 +70,18 @@ stop=0;
 iter=1;
 
 % local travel time computation
-travelTime_local(dim,1) = zeros;
+travelTime_unkown(dim,1) = zeros;
 
 % local travel times storage
-m(dim,1) = zeros;
+travelTime_neighb(dim,1) = zeros;
 
 coordNeighb_Neighb(numNeighbours,dim) = zeros;
 
 while ~stop,
 
-	% find neighbour with lowest travel time in the narrow band.
-	lin_narrowBand = find(nodeState==1); % returns a linear index
+	% continue till all nodes have been traversed
+	lin_narrowBand = find(nodeState==1); 
+    
 	if ~isempty(lin_narrowBand),
         % find the coordinate of the smallest T
 		[~,idx_neighMinTravelTime] = min(travelTime(lin_narrowBand));
@@ -145,77 +145,75 @@ while ~stop,
 			end
 
             % find the smallest travel time of the neighbours neighbour
+            % bascially the values will either be infinity or some finite
+            % value on either side of the neighour
 			for idx_dim=1:dim
                 % minimum in x-direction
 				temp_1 = travelTime(coordNeighb_Neighb(2*idx_dim-1,1)...
                     ,coordNeighb_Neighb(2*idx_dim-1,2));
 				
                 % minimum in y-direction
-                temp_2=travelTime(coordNeighb_Neighb(2*idx_dim,1)...
+                temp_2 = travelTime(coordNeighb_Neighb(2*idx_dim,1)...
                     ,coordNeighb_Neighb(2*idx_dim,2));
 				
-                m(idx_dim)=min(temp_1,temp_2);
-			end
+                travelTime_neighb(idx_dim) = min(temp_1,temp_2);
+            end
 
+            % sort known travel times according to lowest travel times
+			[travelTime_neighb,~] = sort(travelTime_neighb);
             
-            % for a corner node; m(1) and m(2) will both have non-infinite
-            % values; but for a "linear" node; either m(1) or m(2) will be
-            % infinite (as the wave has not reached the linear neighbours
-            % yet) - WELL FOR ***ONE*** SOURCE AT LEAST!
+            % in nD, the nth sorted travel time is the slowest
+			idx_slowerT = dim; 
+            
+            % find the minimum travel time that can occur (to a "linear"
+            % neighbour
+			travelTime_unkown(1) = travelTime_neighb(1) ... 
+                + delta/NodeSpeed_curr;
+			travelTime_unkown(idx_slowerT) = travelTime_unkown(1);
+			cont = 0;
+            
+			% while the fastest travel time is slower the slowest travel
+			% time of the neighbour 
+			while travelTime_unkown(idx_slowerT-1) ...
+                    > travelTime_neighb(idx_slowerT) && ~cont
 
-            % sort travel times according to lowest travel times
-			[m,ind_m]=sort(m);
-            % this is hard coded? (dimensionality?)
-			idx_source=2; % always the "slower" arrival time 
-            % travel time of neigbhour + step-size/speed; this is the
-            % minimal travel time there can be (note using m(1); which has
-            % already been sorted) 
-			travelTime_local(1)=m(1)+delta/NodeSpeed_curr;
-			travelTime_local(idx_source)=travelTime_local(1);
-			me_pase_de_dim=0;
-			% we have to check this account, it gives sweet potatoes
-            % maybe a check for being next to another source?
-			while travelTime_local(idx_source-1)>m(idx_source) & ~me_pase_de_dim
-				%fprintf('8');
-                % solving the roots of the quadratic equation for corner
-                % points
-				%u(k)=sum(m(1:k))+sqrt( sum(m(1:k))^2 + k*delta^2/F_curr + k*sum(m(1:k).^2) );
-				%u(k)=sum(m(1:k))+sqrt( sum(m(1:k))^2 + k*delta^2/F_curr - k*sum(m(1:k).^2) );
+                % solve the quadratic equation for the "corner" neigbhours
                 alpha = 2;
-                beta = -2*sum(m(1:idx_source));
-                gamma = m(1)^2+m(2)^2 - delta^2/NodeSpeed_curr^2;
-                u_tmp1 = (-beta + sqrt(beta^2-4*alpha*gamma) ) / (2*alpha);
-                u_tmp2 = (-beta + sqrt(beta^2-4*alpha*gamma) ) / (2*alpha);
-                travelTime_local(idx_source) = max(u_tmp1,u_tmp2);
-				%u(k)=u(k)/k;
-				if idx_source<dim-2
-					idx_source=idx_source+1;
-				else
-					me_pase_de_dim=1;
-				end
+                beta = -2*sum(travelTime_neighb(1:idx_slowerT));
+                gamma = travelTime_neighb(1)^2+travelTime_neighb(2)^2 ...
+                    - delta^2/NodeSpeed_curr^2;
+                T_tmp1 = (-beta + sqrt(beta^2-4*alpha*gamma) ) / (2*alpha);
+                T_tmp2 = (-beta + sqrt(beta^2-4*alpha*gamma) ) / (2*alpha);
+                
+                % take the slower travel time
+                travelTime_unkown(idx_slowerT) = max(T_tmp1,T_tmp2);
+				
+                disp(w_loop)
+				%if idx_slowerT < dim-2
+				%	idx_slowerT = idx_slowerT + 1;
+				%else
+					cont = 1;
+				%end
+                w_
 			end
 
-			%T(current_vecino(1),current_vecino(2))=u(k);
-			% REVIEW: this may be wrong
-			% I'm changing the value even if it's not NW I'd have to check this.
-			% able that there is another better place to do it...
-			% k or k-1??????
-			if nodeState(currentNeighbour(1),currentNeighbour(2))==1
-				travelTime(currentNeighbour(1),currentNeighbour(2))=travelTime_local(idx_source);
-			end
-			%fprintf('9');
-			% keyboard
+			%...
+			if nodeState(currentNeighbour(1),currentNeighbour(2)) == 1
+				travelTime(currentNeighbour(1),currentNeighbour(2)) = travelTime_unkown(idx_slowerT);
+            end
 		end
 
 	else
-		stop=1;
-	end
-	iter=iter+1;
+		stop = 1;
+    end
+    
+	iter = iter + 1;
+    
 	%fprintf('paso: %d \n',iter);
 	if (plot)
 		figure(1);
 		mesh(travelTime);
-		axis([0 50 0 50 0 50])
+		axis([0 domainBounds(1) 0 domainBounds(2) 0 domainBounds(2)])
 		drawnow;
 	end
 	%colormap(gray(256));
@@ -229,9 +227,9 @@ while ~stop,
 	%    pause;
 end
 
-if (plot)
-	figure
+%if (plot)
+%	figure
 	%image(255./(max(max(T))-min(min(T)))*(T-min(min(T))));
 	%colormap(gray(256))
-	mesh(travelTime);
-end
+%	mesh(travelTime);
+%end

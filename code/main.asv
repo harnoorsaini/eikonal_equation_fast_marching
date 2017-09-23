@@ -53,14 +53,14 @@ domainLength = [20 20]; %mm
 delta = 1; %mm
 
 % set source locations in mm [x y] @ 1 per row
-rand = 0;
+rand = 1;
 if rand
-    sources = [domainLength(1)*rand domainLength(2)*rand; ... 
-    domainLength(1)*rand domainLength(2)*rand; ...
-    domainLength(1)*rand domainLength(2)*rand; ...
-    domainLength(1)*rand domainLength(2)*rand]; %mm
+    sources = [domainLength(1)*Rand domainLength(2)*Rand; ... 
+    domainLength(1)*Rand domainLength(2)*Rand; ...
+    domainLength(1)*Rand domainLength(2)*Rand; ...
+    domainLength(1)*Rand domainLength(2)*Rand]; %mm
 else
-    sources = [10 10];
+    sources = [5 5; 10 2; 17 16];
 end
 numSources = size(sources,1);
 
