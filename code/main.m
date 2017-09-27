@@ -60,7 +60,7 @@ if randSources
     domainLength(1)*rand domainLength(2)*rand; ...
     domainLength(1)*rand domainLength(2)*rand]; %mm
 else
-    sources = [2 2];
+    sources = [5 5];
 end
 numSources = size(sources,1);
 
@@ -72,10 +72,9 @@ idx_y = 2;
 nodeCoords_x = 1:delta:domainLength(idx_x); 
 nodeCoords_y = 1:delta:domainLength(idx_y);
 
-numNodes_x = size(nodeCoords_x,2);
-numNodes_y = size(nodeCoords_y,2);
+numNodes_x = size(nodeCoords_x,2)+1;
+numNodes_y = size(nodeCoords_y,2)+1;
 domainNodesBounds = [numNodes_x,numNodes_y];
-
 % sources
 sourcesNodes(numSources,idx_y) = zeros;
 for idx_source = 1:numSources
@@ -86,7 +85,8 @@ end
 % -------------------------------------------------------------------------
 % PERFORM MAST MARCHING TO FIND TRAVEL TIMES
 
-T = fast_marching(sourcesNodes,domainNodesBounds,plotting,delta,dim);
+T = fast_marching(sourcesNodes,domainNodesBounds,plotting,delta,dim, ...
+    domainLength);
 
 %if plotting
 %    mesh(T);

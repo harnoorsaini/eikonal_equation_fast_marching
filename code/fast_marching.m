@@ -1,4 +1,5 @@
-function travelTime = fast_marching(sources,domainBounds,plot,delta,dim)
+function travelTime = fast_marching(sources,domainBounds,plot,delta,dim, ...
+    domainLength)
 
 % -------------------------------------------------------------------------
 % XXX
@@ -9,6 +10,8 @@ function travelTime = fast_marching(sources,domainBounds,plot,delta,dim)
 %delta=1;
 
 numSources = size(sources,1);
+
+% -------------------------------------------------------------------------
 % Define neighbour connectivity; currently: 
 %
 %         [3](0,1)
@@ -23,12 +26,12 @@ numSources = size(sources,1);
 neighbourStencil = [1 0;-1 0;0 1;0 -1];
 numNeighbours = size(neighbourStencil,1);
 
+% -------------------------------------------------------------------------
 % set up empty values at FD grid points
 % speed values mm/s
 nodeSpeed = ones(domainBounds(1),domainBounds(2));
 % travel times - to be solved for; initiall inifinity 
 travelTime = ones(domainBounds(1),domainBounds(2))*inf;
-
 % set state: frozen(0); narrow band (1); or unknown (2)
 nodeState = 2*ones(domainBounds(1),domainBounds(2));
 
@@ -40,6 +43,7 @@ nodeState(idx_Source) = 0;
 
 neighbourNodes(numNeighbours,dim) = zeros;
 
+% -------------------------------------------------------------------------
 % define narrow band for the number of sources by finding the neighbours
 % around all the sources
 for idx_source = 1:numSources
@@ -49,8 +53,8 @@ for idx_source = 1:numSources
             sources(idx_source,idx_dim)+neighbourStencil(:,idx_dim);
         
         % check if any neighbours lie outside the FD grid
-        Logidx =  neighbourNodes(:,idx_dim)>domainBounds(idx_dim) ... 
-            | neighbourNodes(:,idx_dim)<0 ;
+        Logidx =  find( neighbourNodes(:,idx_dim)>domainBounds(idx_dim) ... 
+            | neighbourNodes(:,idx_dim)<0) ;
         
         % use logical indexing to ommit these "ghost neighbours" 
         neighbourNodes(Logidx,idx_dim) = sources(idx_source,idx_dim);
@@ -65,7 +69,7 @@ for idx_source = 1:numSources
     travelTime(idx_Neighbour)=delta./nodeSpeed(idx_Neighbour);
 end
 
-
+% -------------------------------------------------------------------------
 stop=0;
 iter=1;
 
@@ -81,7 +85,7 @@ while ~stop,
 
 	% continue till all nodes have been traversed
 	lin_narrowBand = find(nodeState==1); 
-    
+    % ---------------------------------------------------------------------
 	if ~isempty(lin_narrowBand),
         % find the coordinate of the smallest T
 		[~,idx_neighMinTravelTime] = min(travelTime(lin_narrowBand));
@@ -101,8 +105,8 @@ while ~stop,
 			neighbourNodes(:,idx_dim) = ...
                 currNode(idx_dim)+neighbourStencil(:,idx_dim);
 			
-            Logidx= neighbourNodes(:,idx_dim)>domainBounds(idx_dim) ...
-                | neighbourNodes(:,idx_dim)<=0 ;
+            Logidx =find(neighbourNodes(:,idx_dim)>domainBounds(idx_dim) ...
+                | neighbourNodes(:,idx_dim)<=0);
             			
 			neighbourNodes(Logidx,idx_dim) = currNode(idx_dim) ... 
                 -(neighbourNodes(Logidx,idx_dim)-currNode(idx_dim));
@@ -134,9 +138,9 @@ while ~stop,
 				coordNeighb_Neighb(:,idx_dim) = ... 
                     currentNeighbour(idx_dim) + neighbourStencil(:,idx_dim);
 				
-                Logidx = coordNeighb_Neighb(:,idx_dim) ... 
+                Logidx = find(coordNeighb_Neighb(:,idx_dim) ... 
                     >domainBounds(idx_dim) | ... 
-                    coordNeighb_Neighb(:,idx_dim)<=0;
+                    coordNeighb_Neighb(:,idx_dim)<=0);
                 
 				coordNeighb_Neighb(Logidx,idx_dim) =  ... 
                     currentNeighbour(idx_dim) - ... 
@@ -175,7 +179,7 @@ while ~stop,
 			% while the fastest travel time is slower the slowest travel
 			% time of the neighbour 
 			while travelTime_unkown(idx_slowerT-1) ...
-                    > travelTime_neighb(idx_slowerT) && cont 
+                    > travelTime_neighb(idx_slowerT) && ~cont 
 
                 % solve the quadratic equation for the "corner" neigbhours
                 alpha = 2;
@@ -183,7 +187,7 @@ while ~stop,
                 gamma = travelTime_neighb(1)^2+travelTime_neighb(2)^2 ...
                     - delta^2/NodeSpeed_curr^2;
                 T_tmp1 = (-beta + sqrt(beta^2-4*alpha*gamma) ) / (2*alpha);
-                T_tmp2 = (-beta + sqrt(beta^2-4*alpha*gamma) ) / (2*alpha);
+                T_tmp2 = (-beta - sqrt(beta^2-4*alpha*gamma) ) / (2*alpha);
                 
                 % take the slower travel time
                 travelTime_unkown(idx_slowerT) = max(T_tmp1,T_tmp2);
@@ -210,8 +214,8 @@ while ~stop,
 	%fprintf('paso: %d \n',iter);
 	if (plot)
 		figure(1);
-		mesh(travelTime);
-		axis([0 domainBounds(1) 0 domainBounds(2) 0 domainBounds(2)])
+		mesh([0:delta:domainLength(1)],[0:delta:domainLength(2)],travelTime);
+		%axis([0 domainLength(1)+1 0 domainLength(2)+1 0 domainLength(2)+1])
 		drawnow;
 	end
 	%colormap(gray(256));
