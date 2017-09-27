@@ -49,18 +49,18 @@ dim = 2;
 plotting = 1;
 
 % set finite difference grid geometry [x y]
-domainLength = [20 20]; %mm
+domainLength = [10 10]; %mm
 delta = 1; %mm
 
 % set source locations in mm [x y] @ 1 per row
-rand = 1;
-if rand
-    sources = [domainLength(1)*Rand domainLength(2)*Rand; ... 
-    domainLength(1)*Rand domainLength(2)*Rand; ...
-    domainLength(1)*Rand domainLength(2)*Rand; ...
-    domainLength(1)*Rand domainLength(2)*Rand]; %mm
+randSources = 0;
+if randSources
+    sources = [domainLength(1)*rand domainLength(2)*rand; ... 
+    domainLength(1)*rand domainLength(2)*rand; ...
+    domainLength(1)*rand domainLength(2)*rand; ...
+    domainLength(1)*rand domainLength(2)*rand]; %mm
 else
-    sources = [5 5; 10 2; 17 16];
+    sources = [5 5];
 end
 numSources = size(sources,1);
 
@@ -75,7 +75,6 @@ nodeCoords_y = 1:delta:domainLength(idx_y);
 numNodes_x = size(nodeCoords_x,2);
 numNodes_y = size(nodeCoords_y,2);
 domainNodesBounds = [numNodes_x,numNodes_y];
-
 % sources
 sourcesNodes(numSources,idx_y) = zeros;
 for idx_source = 1:numSources
@@ -86,11 +85,11 @@ end
 % -------------------------------------------------------------------------
 % PERFORM MAST MARCHING TO FIND TRAVEL TIMES
 
-T = fast_marching(sourcesNodes,domainNodesBounds,plotting,delta,dim);
+T = fast_marching(sourcesNodes,domainNodesBounds,plotting,delta,dim, domainL);
 
-if plotting
-    mesh(T);
-end
+%if plotting
+%    mesh(T);
+%end
 
 
 
