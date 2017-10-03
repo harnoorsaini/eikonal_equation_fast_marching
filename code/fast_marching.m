@@ -30,6 +30,8 @@ numNeighbours = size(neighbourStencil,1);
 % set up empty values at FD grid points
 % speed values mm/s
 nodeSpeed = ones(domainBounds(1),domainBounds(2));
+%nodeSpeed(1:4,1:4) = zeros;
+%nodeSpeed(4:6,3) = zeros;
 % travel times - to be solved for; initiall inifinity 
 travelTime = ones(domainBounds(1),domainBounds(2))*inf;
 % set state: frozen(0); narrow band (1); or unknown (2)
